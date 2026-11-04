@@ -1,0 +1,33 @@
+name: publish-instagram
+
+on:
+  schedule:
+    - cron: "0 5 * * 1,3,5"   # Senin, Rabu, Jumat 05:00 UTC = 12:00 WIB
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install requests
+      - name: Run due posts
+        env:
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          GRAPH_VERSION: v21.0
+          AUTOPOST_ENABLED: ${{ vars.AUTOPOST_ENABLED || 'false' }}
+        run: python automation/run_due.py
+      - name: Save publish status
+        run: |
+          git config user.name "binamu-bot"
+          git config user.email "bot@binamu.id"
+          git add automation/queue || true
+          git diff --cached --quiet || git commit -m "chore: update publish status"
+          git push || true
